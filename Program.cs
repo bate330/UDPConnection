@@ -84,19 +84,23 @@ namespace ConsoleApp15
 
         static void Main(string[] args)
         {
-            byte[] ack = { 06 };
+            Byte[] ack = { 06 };
+            Byte[] receiveBytes = { };
+            Byte[] sendBytes= { };
+            Byte[] sM_OK = {02, 00, 29, 03, 128, 00, 01, 95, 03 };
+            string ipaddress;
+            int port;
+
             try
             {
                 Console.WriteLine("Input ip: ");
-                string ipaddress = Console.ReadLine();
+                ipaddress = Console.ReadLine();
                 Console.WriteLine("Input port: ");
-                string PrinterPort = Console.ReadLine();
-                int port = Int32.Parse(PrinterPort);
+                port = Int32.Parse(Console.ReadLine());
                 UdpClient udpClient = new UdpClient(ipaddress, port);
                 Console.WriteLine("Input Frame: ");
-                string text = Console.ReadLine();
+                sendBytes = StringToByteArray(Console.ReadLine());
                 IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, port);
-                Byte[] sendBytes = StringToByteArray(text);
                 UdpSender(sendBytes, udpClient);
                 //----------------------------------
                 System.Threading.Thread.Sleep(1000);
@@ -104,8 +108,14 @@ namespace ConsoleApp15
                 bool ReceiveAck = UdpReceiveAck(udpClient, RemoteIpEndPoint);
                 if (ReceiveAck == true)
                 {
-                    Byte[] receiveBytes1 = UdpReceiver(RemoteIpEndPoint, udpClient, port);
+                    receiveBytes = UdpReceiver(RemoteIpEndPoint, udpClient, port);
                     UdpSender(ack, udpClient);
+                    while (receiveBytes.Length!=0)
+                    {
+                        receiveBytes = UdpReceiver(RemoteIpEndPoint, udpClient, port);
+                        UdpSender(ack, udpClient);
+                    }
+                    //receiveBytes = UdpReceiver(RemoteIpEndPoint, udpClient, port);
                 } 
 
             }
