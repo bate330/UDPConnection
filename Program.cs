@@ -12,7 +12,7 @@ namespace ConsoleApp15
     {
         public static byte[] StringToByteArray(string hex)
         {
-            string[] Bytes = hex.Split(',');
+            string[] Bytes = hex.Split(' ');
             int[] bytes = new int[Bytes.Length];
             byte[] byte1 = new byte[bytes.Length];
             for (int i=0;i<Bytes.Length;i++)
@@ -24,10 +24,67 @@ namespace ConsoleApp15
             return byte1;
         }
 
+        public static void UdpSender(byte[] sendBytes, UdpClient udpClient)
+        {
+            // 02 00 01 a 30 00 30 30 30 30 00 00 00 00 05 03 === print on
+            udpClient.Send(sendBytes, sendBytes.Length);
+            int[] SendBytesint = new int[sendBytes.Length];
+            string[] SendHexValue = new string[sendBytes.Length];
+            Console.WriteLine();
+            Console.WriteLine("You have sent: ");
+            for (int i = 0; i < sendBytes.Length; i++)
+            {
+                SendBytesint[i] = Convert.ToInt32(sendBytes[i]);
+                SendHexValue[i] = SendBytesint[i].ToString("X");
+                Console.Write(SendHexValue[i] + " ");
+            }
+            Console.WriteLine();
+        }
+
+        public static bool UdpReceiveAck(UdpClient udpClient, IPEndPoint RemoteIpEndPoint)
+        {
+            Byte[] receiveACK = udpClient.Receive(ref RemoteIpEndPoint);
+            int[] ACKint = new int[receiveACK.Length];
+            string[] HexValue = new string[receiveACK.Length];
+
+            Console.WriteLine("Received ACK: ");
+            for (int i = 0; i < receiveACK.Length; i++)
+            {
+                ACKint[i] = Convert.ToInt32(receiveACK[i]);
+                HexValue[i] = ACKint[i].ToString("X");
+                Console.Write(HexValue[i] + " ");
+            }
+
+            if (receiveACK[0] == 6)
+            {
+                return true;
+            }
+            else
+                return false;
+        }
+
+
+        public static Byte[] UdpReceiver(IPEndPoint RemoteIpEndPoint, UdpClient udpClient, int port)
+        {
+                Console.WriteLine();
+                Console.WriteLine("Received Frame: ");
+
+                Byte[] receiveFrame = udpClient.Receive(ref RemoteIpEndPoint);
+                int[] ACKframe = new int[receiveFrame.Length];
+                string[] HexValue = new string[receiveFrame.Length];
+
+                for (int i = 0; i < receiveFrame.Length; i++)
+                {
+                    ACKframe[i] = Convert.ToInt32(receiveFrame[i]);
+                    HexValue[i] = ACKframe[i].ToString("X");
+                    Console.Write(HexValue[i] + " ");
+                }
+            return receiveFrame;
+        }
+
         static void Main(string[] args)
         {
-            
-           // Byte[] sendBytes = { 02, 00, 01, 10 ,48 ,00, 48 ,48 ,48 ,48 ,00, 00 ,00 ,00 ,05, 03 };// print on
+            byte[] ack = { 06 };
             try
             {
                 Console.WriteLine("Input ip: ");
@@ -35,57 +92,21 @@ namespace ConsoleApp15
                 Console.WriteLine("Input port: ");
                 string PrinterPort = Console.ReadLine();
                 int port = Int32.Parse(PrinterPort);
-                Console.WriteLine("Input Frame (as a separator use: ','): ");
-                string text = Console.ReadLine();
-                Byte[] sendBytes = StringToByteArray(text);
                 UdpClient udpClient = new UdpClient(ipaddress, port);
-                udpClient.Send(sendBytes, sendBytes.Length);
-                int[] SendBytesint = new int[sendBytes.Length];
-                string[] SendHexValue = new string[sendBytes.Length];
-
-                Console.WriteLine("You have sent: ");
-                for (int i = 0; i < sendBytes.Length; i++)
-                {
-                    SendBytesint[i] = Convert.ToInt32(sendBytes[i]);
-                    SendHexValue[i] = SendBytesint[i].ToString("X");
-                    Console.Write(SendHexValue[i] + ", ");
-                }
-                Console.WriteLine();
-            
-            //-----------------------------------------------------------------------------------------------
+                Console.WriteLine("Input Frame: ");
+                string text = Console.ReadLine();
+                IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, port);
+                Byte[] sendBytes = StringToByteArray(text);
+                UdpSender(sendBytes, udpClient);
+                //----------------------------------
                 System.Threading.Thread.Sleep(1000);
-            //----------------------------------------------------------------------------------------------------------
-
-            //Creates an IPEndPoint to record the IP Address and port number of the sender.
-            // The IPEndPoint will allow you to read datagrams sent from any source.
-
-                IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any , 3000);
-
-            // Blocks until a message returns on this socket from a remote host.
-                Byte[] receiveACK = udpClient.Receive(ref RemoteIpEndPoint);
-                int[] ACKint = new int[receiveACK.Length];
-                string[] HexValue = new string[receiveACK.Length];
-
-                Console.WriteLine("Received ACK: ");
-                for (int i=0 ; i<receiveACK.Length ; i++)
+                //----------------------------------
+                bool ReceiveAck = UdpReceiveAck(udpClient, RemoteIpEndPoint);
+                if (ReceiveAck == true)
                 {
-                    ACKint[i]= Convert.ToInt32(receiveACK[i]);
-                    HexValue[i] = ACKint[i].ToString("X");
-                    Console.Write(HexValue[i] + " ");
-                }
-                Console.WriteLine();
-                Console.WriteLine("Received Frame: ");
-
-                Byte[] receiveFrame = udpClient.Receive(ref RemoteIpEndPoint);
-                ACKint = new int[receiveFrame.Length];
-                HexValue = new string[receiveFrame.Length];
-
-                for (int i=0; i < receiveFrame.Length; i++)
-                {
-                    ACKint[i] = Convert.ToInt32(receiveFrame[i]);
-                    HexValue[i] = ACKint[i].ToString("X");
-                    Console.Write(HexValue[i] + ", ");
-                }
+                    Byte[] receiveBytes1 = UdpReceiver(RemoteIpEndPoint, udpClient, port);
+                    UdpSender(ack, udpClient);
+                } 
 
             }
             catch (Exception e)
